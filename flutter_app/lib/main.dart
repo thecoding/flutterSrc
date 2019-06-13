@@ -1,7 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 void main() => runApp(App());
+
+
+const chooseColor = Color.fromRGBO(8, 109, 202, 1); //字段选中颜色
+const fontColor = Colors.white; //字段默认颜色
+const buttonBackColor = Color.fromRGBO(111, 168, 223,1); //密码登陆 或 验证码登陆 按钮背景颜色
+const inputBackColor = Color.fromRGBO(88, 154, 219,1); // 输入框背景颜色
+
 
 class App extends StatefulWidget {
   @override
@@ -11,15 +20,22 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> {
-  var pwdColor = Color.fromRGBO(8, 109, 202, 1);
-  var codeColor = Colors.white;
-  var isPwdLogin = true;
+
+  var isPwdLogin = true; // 密码登陆 或 验证码登陆 --> true 密码登陆   false  验证码登陆
+
+
+  var hintStr = ""; //手机号码提示语
+  var isShow = false ; //手机号码提示语是否显示  false 显示  true 不显示
 
   //手机号的控制器
   TextEditingController phoneController = TextEditingController();
 
   //密码的控制器
   TextEditingController passController = TextEditingController();
+
+  var _countdownTime = 0;
+
+  Timer _timer;
 
   @override
   Widget build(BuildContext context) {
@@ -60,8 +76,8 @@ class _AppState extends State<App> {
                               child: new RaisedButton(
                                 onPressed: _pwdChoose,
                                 child: new Text("密码登陆"),
-                                color: const Color.fromRGBO(111, 168, 223,1),
-                                textColor: pwdColor,
+                                color: buttonBackColor,
+                                textColor: isPwdLogin ? chooseColor : fontColor,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.only(topLeft: Radius.circular(5.0)),
                                 ),
@@ -75,8 +91,8 @@ class _AppState extends State<App> {
                               child: new RaisedButton(
                                 onPressed: _codeChoose,
                                 child: new Text("验证码登陆"),
-                                color: const Color.fromRGBO(111, 168, 223,1),
-                                textColor: codeColor,
+                                color: buttonBackColor,
+                                textColor: !isPwdLogin ? chooseColor : fontColor,
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.only(topRight: Radius.circular(5.0))
                                 ),
@@ -89,18 +105,16 @@ class _AppState extends State<App> {
                       new Container(
                         width: 350.0,
                         height: 40.0,
-                        decoration: BoxDecoration(color: Color.fromRGBO(88, 154, 219,1),
+                        decoration: BoxDecoration(color: inputBackColor,
                             border: Border.all(color: Colors.yellow,style: BorderStyle.solid),
                         ),
                         child: new Row(
                           children: <Widget>[
                             new Container(
                               padding: EdgeInsets.all(5.0),
-                              child: new Image(image: AssetImage("images/tx.png"),
-                                width: 25.0,
-                                height: 25.0,
-                              ),
+                              child: iconAssetImage("images/tx.png"),
                               decoration: BoxDecoration(
+                                //todo 测试边框
                                 border: Border.all(color: Colors.red,style: BorderStyle.solid),
                               ),
                             ),
@@ -130,39 +144,32 @@ class _AppState extends State<App> {
                                 ),
                               ),
                             ),
-                            new Offstage(
-                              offstage: false,
-                              child: new Text("手机没注册",
-                                style: TextStyle(color: Colors.red,fontSize: 12.0),
-                              ),
-                            ),
+                            phoneHintState(hintStr, isShow),
                           ],
                         ),
                       ),
                       new Container(
                         width: 250.0,
-                        child: Divider(height:0.7,indent:0.0,color: Color.fromRGBO(111, 168, 223,1)),
+                        child: Divider(height:0.7,indent:0.0,color: buttonBackColor),
                       ),
                       new Container(
                         width: 350.0,
                         height: 40.0,
-                        decoration: BoxDecoration(color: Color.fromRGBO(88, 154, 219,1),
+                        decoration: BoxDecoration(color: inputBackColor,
                           border: Border.all(color: Colors.yellow,style: BorderStyle.solid),
                         ),
                         child: new Row(
                           children: <Widget>[
                             new Container(
                               padding: EdgeInsets.all(5.0),
-                              child: new Image(image: AssetImage("images/pwd.png"),
-                                width: 25.0,
-                                height: 25.0,
-                              ),
+                              child: iconAssetImage(isPwdLogin ? "images/pwd.png" : "images/star.png"),
                               decoration: BoxDecoration(
+                                //todo 测试边框
                                 border: Border.all(color: Colors.red,style: BorderStyle.solid),
                               ),
                             ),
                             new Container(
-                              width: 150.0,
+                              width: 100.0,
                               child: new TextField(
                                 controller: passController,
                                 obscureText: true, //密码
@@ -175,47 +182,46 @@ class _AppState extends State<App> {
                                 style: TextStyle(decorationStyle: TextDecorationStyle.solid),
                                 decoration: InputDecoration(
                                   counterText: "",//此处控制最大字符是否显示  maxLength
-                                  hintText: "请输入用户密码",
-//                                border: InputBorder.none,
+                                  hintText: isPwdLogin ? "请输入用户密码" : "请输入验证码",
+                                border: InputBorder.none,
 
                                   //todo 测试边框
-                                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.yellow,style: BorderStyle.solid)),
+//                                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.yellow,style: BorderStyle.solid)),
                                 ),
                               ),
                             ),
                             //控制显示隐藏
                             new Offstage(
                               offstage: false,
-                              child: new Text("手机没注册",
-                                style: TextStyle(color: Colors.red,fontSize: 12.0),
+                              child: new Container(
+                                width: 60.0,
+                                child: new Text("手机没注册",
+                                  style: TextStyle(color: Colors.red,fontSize: 10.0),
+                                ),
+                                decoration: BoxDecoration(
+                                  //todo 测试边框
+                                  border: Border.all(color: Colors.red,style: BorderStyle.solid),
+                                ),
+                              ),
+                            ),
+                            new Offstage(
+                              offstage: false,
+                              child: new GestureDetector(
+                                onTap: () {
+                                  if (_countdownTime == 0 && validateMobile()) {
+                                    setState(() {
+                                      _countdownTime = 60;
+                                    });
+                                    //开始倒计时
+                                    startCountdownTimer();
+                                  }
+                                },
+                                child: new Text( _countdownTime > 0 ? '$_countdownTime\s可重发' : '获取验证码',style: TextStyle(decoration: TextDecoration.underline,decorationColor: Colors.yellow,decorationStyle: TextDecorationStyle.solid,color: Colors.yellow),),
                               ),
                             ),
                           ],
                         ),
                       ),
-//                      new Container(
-//                        decoration: BoxDecoration(color: Color.fromRGBO(88, 154, 219,1),borderRadius: BorderRadius.only(bottomLeft: Radius.circular(5.0),bottomRight: Radius.circular(5.0))),
-//                        child: new Offstage(
-//                          offstage: false,
-//                          child: new TextField(
-//                            controller: passController,
-//                            obscureText: true, //密码
-//                            maxLength: 18,
-//                            decoration: InputDecoration(
-//                              counterText: "",//此处控制最大字符是否显示  maxLength
-//                              hintText: "请输入用户密码",
-//                              border: InputBorder.none,
-//                              icon: new Container(child:Image.asset("images/pwd.png",width: 30.0,height: 30.0,),
-//                                padding: EdgeInsets.only(left: 5.0,right: 5.0),
-//                                decoration: BoxDecoration(
-//                                  //todo 测试边框
-//                                  border: Border.all(color: Colors.red,style: BorderStyle.solid),
-//                                ),
-//                              ),
-//                            ),
-//                          ),
-//                        ),
-//                      ),
                       new Container(
                         width: 300.0,
                         padding: EdgeInsets.only(top: 10.0),
@@ -223,7 +229,7 @@ class _AppState extends State<App> {
                           onPressed: _loginSubmit,
                           child: new Text("登陆"),
                           color: const Color.fromRGBO(79, 179, 93,1),
-                          textColor: Colors.white,
+                          textColor: fontColor,
                         ),
                       ),
                       new Container(
@@ -234,9 +240,9 @@ class _AppState extends State<App> {
                               child: new GestureDetector(
                                 onTap: _forgetPwd,
                                 child: new Text(
-                                  "忘记密码",
+                                  "忘记密码?",
                                   textAlign: TextAlign.start,
-                                  style: TextStyle(color: Colors.white),
+                                  style: TextStyle(color: fontColor),
                                 ),
                               ),
                               flex: 1,
@@ -247,7 +253,7 @@ class _AppState extends State<App> {
                                 child: new Text(
                                   "免费注册",
                                   textAlign: TextAlign.end,
-                                  style: TextStyle(color: Colors.white),
+                                  style: TextStyle(color: fontColor),
                                 ),
                               ),
                               flex: 1,
@@ -266,8 +272,6 @@ class _AppState extends State<App> {
 
   void _pwdChoose() {
     setState(() {
-      pwdColor = Color.fromRGBO(8, 109, 202, 1);
-      codeColor = Colors.white;
       isPwdLogin = true;
     });
     print("密码登陆");
@@ -275,8 +279,6 @@ class _AppState extends State<App> {
 
   void _codeChoose() {
     setState(() {
-      pwdColor = Colors.white;
-      codeColor = Color.fromRGBO(8, 109, 202, 1);
       isPwdLogin = false;
     });
     print("验证码登陆");
@@ -292,5 +294,63 @@ class _AppState extends State<App> {
 
   void _loginSubmit() {
     print("登陆...");
+  }
+
+
+  // 手机号码错误提示
+  // hintStr 提示语
+  //isShow 是否显示控件  false 显示   true 不显示
+  Widget phoneHintState(String hintStr, bool isShow){
+    return new Offstage(
+        offstage: isShow,
+        child: new Text(hintStr,
+        style: TextStyle(color: Colors.red,fontSize: 12.0),
+      ),
+    );
+  }
+
+
+  Widget iconAssetImage(String imagePath){
+    return new Image(image: AssetImage(imagePath),
+      width: 25.0,
+      height: 25.0,
+    );
+  }
+
+
+  //获取验证码
+  void _getCode() {
+    print("获取验证码..");
+  }
+
+  //验证手机号码
+  bool validateMobile() {
+    return true;
+  }
+
+
+
+  //开始倒计时
+  void startCountdownTimer() {
+    const oneSec = const Duration(seconds: 1);
+
+    _timer = Timer.periodic(oneSec, (timer){
+      setState(() {
+        if (_countdownTime < 1) {
+          _timer.cancel();
+        } else {
+          _countdownTime = _countdownTime - 1;
+        }
+      });
+    });
+  }
+
+
+  @override
+  void dispose() {
+    super.dispose();
+    if (_timer != null) {
+      _timer.cancel();
+    }
   }
 }
