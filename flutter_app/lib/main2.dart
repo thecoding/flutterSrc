@@ -1,34 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_app/UserCenter.dart';
-import 'package:flutter_app/httpRequest.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-//
-import 'pages/indexPage.dart';
+import 'package:http/http.dart' as http;
 
-void main() => runApp(new MyApp());
+void main() => runApp(App());
 
 const chooseColor = Color.fromRGBO(8, 109, 202, 1); //字段选中颜色
 const fontColor = Colors.white; //字段默认颜色
 const buttonBackColor = Color.fromRGBO(111, 168, 223, 1); //密码登陆 或 验证码登陆 按钮背景颜色
 const inputBackColor = Color.fromRGBO(88, 154, 219, 1); // 输入框背景颜色
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return new MaterialApp(
-      title: 'Flutter Demo',
-      theme: new ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: new App(),
-    );
-  }
-}
 
 class App extends StatefulWidget {
   @override
@@ -55,10 +39,6 @@ class _AppState extends State<App> {
 
   @override
   Widget build(BuildContext context) {
-
-    //屏幕适配方案
-    ScreenUtil.instance = ScreenUtil(width: 750, height: 1334, allowFontScaling: false)..init(context);
-
     return MaterialApp(
         title: "demo",
         home: new SafeArea(
@@ -346,62 +326,51 @@ class _AppState extends State<App> {
     print("免费注册");
   }
 
-  //  @"appOsVer":[NSString stringWithFormat:@"%@%@",systemName,systemVersion],
-  //  @"appVerNo":Version,
-  //  @"billId":self.loginType == PasswordType?self.textPhone1.text:self.textPhone2.text,
-  //  @"eand":[Utils stringWithoutNil:longitude],
-  //  @"loginType":[NSString stringWithFormat:@"%ld",(long)self.loginType],
-  //  @"mobileBrand":@"IPhone",
-  //  @"mobileType":model,
-  //  @"nand":[Utils stringWithoutNil:latitude],
-  //  @"pushAppId":pushAppId,
-  //  @"pushChannelId":channelId,
-  //  @"pushUserId":userId,
-  //  @"pwd":self.loginType == PasswordType?[Utils base64Encrypt:self.password.text]:@"",
-  //  @"sendCode":self.loginType == AuthCodeType?[Utils base64Encrypt:self.authCode.text]:@"",
   Future _loginSubmit() async {
-        Navigator.push(context,new MaterialPageRoute(builder: (context) => new IndexPage()));
+    var map2 = {'billId': phoneController.text};
+    // var map1<String, Object> = {'inCode': '10017', 'netType': 'wifi', 'appId': 'ios', 'ver': '1.6.3', 'uId': '', 'tokenId': '', 'content':map2};
+    var map1 = Map<String, Object>();
+    map1['inCode'] = '10017';
+    map1['netType'] = 'wifi';
+    map1['appId'] = 'ios';
+    map1['ver'] = '1.6.3';
+    map1['uId'] = '';
+    map1['tokenId'] = '';
+    map1['content'] = map2;
 
-    // String password =
-    // base64Encode(utf8.encode('12' + passController.text + '34{zx}'));
-    // Map map2 = {
-    //   'appOsVer': 'iOS12.2',
-    //   'appVerNo': '1.6.3',
-    //   'billId': phoneController.text,
-    //   'eand': '113.170000',
-    //   'loginType': '1',
-    //   'mobileBrand': 'iPhone',
-    //   'mobileType': 'iPhone',
-    //   'nand': '23.800000',
-    //   'pushAppId': '',
-    //   'pushChannelId': '',
-    //   'pushUserId': '',
-    //   'pwd': password,
-    //   'sendCode': '',
-    // };
+    num time = new DateTime.now().millisecondsSinceEpoch;
+    String time_str = (time / 1000).toStringAsFixed(0);
 
-    // HttpRequestClient.getInstance().post('10007', map2).then((response) async {
-    //   print("Response status: ${response.statusCode}");
-    //   print("Response body: ${response.body}");
-    //   SharedPreferences prefs = await SharedPreferences.getInstance();
-    //   var body = jsonDecode(response.body);
+    var random = Random();
+    String randomStr = random.nextInt(2147483647).toString(); //random uint32
 
-    //   if (body['status'] == 200) {
+    String json_str2 = jsonEncode(map2);
 
-    //     Map<String, Object> content = body['content'];
-    //     prefs.setString('billId', content['billId']);
-    //     prefs.setString('tenantId', content['tenantId']);
-    //     prefs.setString('tokenId', content['tokenId']);
-    //     prefs.setString('userId', content['userId']);
-    //     prefs.setString('userName', content['userName']);
-    //     prefs.setString('userPicture', content['userPicture']);
+    List list2 = new List();
+    list2.add("");
+    list2.add(time_str);
+    list2.add(randomStr);
+    list2.add(json_str2);
+    list2.add('DBF45F97DBF3KDD4t41674567DBF45F4');
+    //排序
+    list2.sort((left, right) => Comparable.compare(left, right));
 
-    //     Navigator.push(context,
-    //         new MaterialPageRoute(builder: (BuildContext context) {
-    //           return new SampleApp();
-    //         }));
-    //   }
-    // });
+    String sort_str_2 = list2.toString();
+    var digest_2 = sha1.convert(utf8.encode(sort_str_2));
+
+    String sign2 = digest_2.toString();
+
+    map1['time'] = time_str;
+    map1['rd'] = randomStr;
+    map1['sign'] = sign2;
+
+
+    // var url = 'http://192.168.1.186:27007/intf';
+    var url = 'http://pt.ghc98.com/intf';
+    http.post(url, body: jsonEncode(map1)).then((response) {
+      print("Response status: ${response.statusCode}");
+      print("Response body: ${response.body}");
+    });
   }
 
   // 手机号码错误提示
